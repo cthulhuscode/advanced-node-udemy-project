@@ -5,28 +5,40 @@
 */
 
 const mongoose = require("mongoose");
-// const redis = require("redis");
-// const util = require("util");
+const redis = require("redis");
+const util = require("util");
 
-// let client = redis.createClient({
-//   socket: {
-//     host: "localhost",
-//     port: 49154,
-//   },
-//   password: "redispw",
-// });
+let client = redis.createClient({
+  socket: {
+    host: "localhost",
+    port: 49153,
+  },
+  password: "redispw",
+  legacyMode: true,
+});
 
-// (async () => {
-//   await client.connect();
-// })();
+(async () => {
+  await client.connect();
+})();
 
-// // Overwrite and promisify client.get()
-// client.get = util.promisify(client.get);
+// Overwrite and promisify client.get()
+client.get = util.promisify(client.get);
+
+/* Create a cache function, to cache data only when calling
+  that function in a query
+*/
+mongoose.Query.prototype.cache = function () {
+  this.useCache = true;
+
+  // Just for making it chainable
+  return this;
+};
 
 // Get a reference to the original exec function
 const exec = mongoose.Query.prototype.exec;
-
 mongoose.Query.prototype.exec = async function () {
+  if (!this.useCache) return exec.apply(this, arguments);
+
   // Safely copy properties from one object to another
   const key = JSON.stringify(
     Object.assign({}, this.getQuery(), {
@@ -35,20 +47,30 @@ mongoose.Query.prototype.exec = async function () {
   );
 
   // See if we have a value for 'key' in Redis
-  // const cachedValues = await client.get(key);
+  const cachedValue = await client.get(key);
 
-  // // If we do, return that
-  // if (cachedValues) {
-  //   console.log(cachedValues);
-  // }
+  // If we do, return that
+  if (cachedValue) {
+    const doc = JSON.parse(cachedValue);
 
-  /* 
-      Otherwise, issue the query and store the result in Redis
-  
-      Use the unmodified exec function. 
-      Use apply to pass any arguments that are
-      passed to exec. 
-    */
-  const result = await exec.apply(this, arguments);
+    // Hydrate the values
+    return Array.isArray(doc)
+      ? doc.map((d) => new this.model(d))
+      : new this.model(doc);
+  }
+
+  /*
+    Otherwise, issue the query and store the result in Redis
+
+    Use the unmodified exec function.
+    Use apply to pass any arguments that are
+    passed to exec. 
+  */
+  const result = (await exec.apply(this, arguments)) || "";
+
+  // Store data in Redis  
+  if (result && result !== "")
+    client.set(key, JSON.stringify(result), "EX", 10); // 10seg
+
   return result;
 };
