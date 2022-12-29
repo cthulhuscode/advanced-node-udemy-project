@@ -22,13 +22,16 @@ let client = redis.createClient({
 })();
 
 // Overwrite and promisify client.get()
-client.get = util.promisify(client.get);
+client.hget = util.promisify(client.hget);
 
 /* Create a cache function, to cache data only when calling
-  that function in a query
+  that function in a query.
+
+
 */
-mongoose.Query.prototype.cache = function () {
+mongoose.Query.prototype.cache = function (options = {}) {
   this.useCache = true;
+  this.hashKey = JSON.stringify(options.key || "");
 
   // Just for making it chainable
   return this;
@@ -47,7 +50,7 @@ mongoose.Query.prototype.exec = async function () {
   );
 
   // See if we have a value for 'key' in Redis
-  const cachedValue = await client.get(key);
+  const cachedValue = await client.hget(this.hashKey, key);
 
   // If we do, return that
   if (cachedValue) {
@@ -68,9 +71,16 @@ mongoose.Query.prototype.exec = async function () {
   */
   const result = (await exec.apply(this, arguments)) || "";
 
-  // Store data in Redis  
+  // Store data in Redis
   if (result && result !== "")
-    client.set(key, JSON.stringify(result), "EX", 10); // 10seg
+    client.hset(this.hashKey, key, JSON.stringify(result), "EX", 10); // 10seg
 
   return result;
+};
+
+/* export function to clear hash */
+module.exports = {
+  clearHash(hashKey) {
+    client.del(JSON.stringify(hashKey));
+  },
 };
