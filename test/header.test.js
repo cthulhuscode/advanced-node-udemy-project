@@ -3,22 +3,31 @@
 */
 
 const puppeteer = require("puppeteer");
+let browser, page;
 
-test("Adds two numbers", () => {
-  const sum = 1 + 2;
-
-  expect(sum).toEqual(3);
-});
-
-test("Launch a browser", async () => {
+/**
+ * Gets executed before every single test
+ */
+beforeEach(async () => {
   /*
     Browser is the whole program or window
     Page is like a single tab running inside the browser
 
     Always run puppeteer operations asynchronously
   */
-  const browser = await puppeteer.launch({
+  browser = await puppeteer.launch({
     headless: false,
-  });    
-    await page.goto("http://localhost:3000");
+  });
+
+  page = await browser.newPage();
+  await page.goto("http://localhost:3000");
+});
+
+afterEach(async () => {
+  await browser.close();
+});
+
+test("Check if logo appears", async () => {
+  const text = await page.$eval("a.brand-logo", (el) => el.innerHTML);
+  expect(text).toEqual("Blogster");
 });
