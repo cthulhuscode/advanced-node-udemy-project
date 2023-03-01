@@ -3,6 +3,9 @@
 */
 
 const puppeteer = require("puppeteer");
+const { userFactory } = require("./factories/userFactory");
+const { sessionFactory } = require("./factories/sessionFactory");
+
 let browser, page;
 
 /**
@@ -38,24 +41,20 @@ test("Clicking login starts oauth flow", async () => {
   expect(url).toMatch(/accounts\.google\.com/);
 });
 
-test("When signed in, shows logout button", () => {
-  const userId = "63ab7419460abd62afa0a210";
+test("When signed in, shows logout button", async () => {
+  const user = await userFactory();
+  const { session, sig } = sessionFactory(user);
 
-  const Buffer = require("safe-buffer");
-  const sessionObject = {
-    passport: {
-      user: userId,
-    },
-  };
+  await page.setCookie({ name: "session", value: session });
+  await page.setCookie({ name: "session.sig", value: sig });
 
-  const sessionStr = Buffer.from(JSON.stringify(sessionObject)).toString(
-    "base64"
-  );
+  // Refresh page
+  await page.goto("http://localhost:3000");
 
-  const Keygrip = require("keygrip");
-  const keys = require("../config/keys");
-  const keygrip = new Keygrip([keys.cookieKey]);
-  const sig = keygrip.sign("session=" + sessionStr);
+  // Wait until the element appears
+  await page.waitForSelector('a[href="/auth/logout"]');
 
-  console.log(sessionStr, sig);
+  // Get the element
+  const text = await page.$eval('a[href="/auth/logout"]', (el) => el.innerHTML);
+  expect(text).toEqual("Logout");
 });
