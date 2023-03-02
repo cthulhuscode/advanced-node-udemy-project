@@ -2,11 +2,11 @@
   appears and responds the way we expect.
 */
 
-const puppeteer = require("puppeteer");
 const { userFactory } = require("./factories/userFactory");
 const { sessionFactory } = require("./factories/sessionFactory");
+const Page = require("./helpers/page");
 
-let browser, page;
+let page;
 
 /**
  * Gets executed before every single test
@@ -18,16 +18,19 @@ beforeEach(async () => {
 
     Always run puppeteer operations asynchronously
   */
-  browser = await puppeteer.launch({
-    headless: false,
-  });
+  // browser = await puppeteer.launch({
+  //   headless: false,
+  // });
+  // page = await browser.newPage();
 
-  page = await browser.newPage();
+  page = await Page.build();
   await page.goto("http://localhost:3000");
 });
 
 afterEach(async () => {
-  await browser.close();
+  // await browser.close();
+
+  await page.close();
 });
 
 test("Check if logo appears", async () => {
