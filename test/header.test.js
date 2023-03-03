@@ -1,9 +1,6 @@
 /* Test to make sure that the Header of our application
   appears and responds the way we expect.
 */
-
-const { userFactory } = require("./factories/userFactory");
-const { sessionFactory } = require("./factories/sessionFactory");
 const Page = require("./helpers/page");
 
 let page;
@@ -34,7 +31,7 @@ afterEach(async () => {
 });
 
 test("Check if logo appears", async () => {
-  const text = await page.$eval("a.brand-logo", (el) => el.innerHTML);
+  const text = await page.getContentsOf("a.brand-logo");
   expect(text).toEqual("Blogster");
 });
 
@@ -45,19 +42,9 @@ test("Clicking login starts oauth flow", async () => {
 });
 
 test("When signed in, shows logout button", async () => {
-  const user = await userFactory();
-  const { session, sig } = sessionFactory(user);
-
-  await page.setCookie({ name: "session", value: session });
-  await page.setCookie({ name: "session.sig", value: sig });
-
-  // Refresh page
-  await page.goto("http://localhost:3000");
-
-  // Wait until the element appears
-  await page.waitForSelector('a[href="/auth/logout"]');
+  await page.login();
 
   // Get the element
-  const text = await page.$eval('a[href="/auth/logout"]', (el) => el.innerHTML);
+  const text = await page.getContentsOf('a[href="/auth/logout"]');
   expect(text).toEqual("Logout");
 });
