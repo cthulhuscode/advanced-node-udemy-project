@@ -11,7 +11,7 @@ const util = require("util");
 let client = redis.createClient({
   socket: {
     host: "localhost",
-    port: 49153,
+    port: 32768,
   },
   password: "redispw",
   legacyMode: true,
