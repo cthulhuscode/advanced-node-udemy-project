@@ -36,6 +36,7 @@ test("Check if logo appears", async () => {
 });
 
 test("Clicking login starts oauth flow", async () => {
+  await page.waitForSelector(".right a");
   await page.click(".right a");
   const url = await page.url();
   expect(url).toMatch(/accounts\.google\.com/);
