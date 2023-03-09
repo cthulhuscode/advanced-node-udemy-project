@@ -1,0 +1,23 @@
+language: node_js
+node_js:
+  - 18
+dist: trusty
+services:
+  - mongodb
+  - redis
+env:
+  - NODE_ENV=ci
+cache:
+  directories:
+    - node_modules
+    - client/node_modules
+install:
+  - npm install
+  - npm run build
+script:
+  # & -> run the command in background mode, don't block the terminal
+  # nohup -> no hangup. If the terminal is closed, don't kill processes made by the terminal
+  - nohup npm run start &
+  # Wait 3 seg to start the server
+  - sleep 3
+  - npm run test
