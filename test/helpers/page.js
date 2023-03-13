@@ -64,7 +64,12 @@ class CustomPage {
 
   static async build() {
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: ["production", "ci"].includes(process.env.NODE_ENV)
+        ? true
+        : false,
+      args: ["production", "ci"].includes(process.env.NODE_ENV)
+        ? ["--no-sandbox"]
+        : [""],
     });
     const page = await browser.newPage();
     const customPage = new CustomPage(page);

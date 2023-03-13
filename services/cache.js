@@ -7,13 +7,14 @@
 const mongoose = require("mongoose");
 const redis = require("redis");
 const util = require("util");
+const keys = require("../config/keys");
 
 let client = redis.createClient({
   socket: {
-    host: "localhost",
-    port: 32768,
+    host: keys.redisHost,
+    port: keys.redisPort,
   },
-  password: "redispw",
+  password: keys.redisPassword,
   legacyMode: true,
 });
 
